@@ -1,0 +1,35 @@
+# === Gruvbox Dark ===
+
+[mgr]
+cwd = { fg = "#d79921", bold = true }
+
+hovered = { bg = "#3c3836", fg = "#ebdbb2" }
+selected = { bg = "#504945", fg = "#ebdbb2" }
+
+border = { fg = "#504945" }
+tab_active = { bg = "#3c3836", fg = "#ebdbb2" }
+tab_inactive = { bg = "#282828", fg = "#928374" }
+
+marker_copied = { fg = "#98971a", bold = true }
+marker_cut    = { fg = "#cc241d", bold = true }
+marker_marked = { fg = "#458588", bold = true }
+
+[status]
+separator = { fg = "#504945" }
+
+mode_normal = { fg = "#98971a", bold = true }
+mode_select = { fg = "#d79921", bold = true }
+mode_unset  = { fg = "#928374" }
+
+[preview]
+border = "#504945"
+
+[filetype]
+rules = [
+  { mime = "image/*", fg = "#98971a" },
+  { mime = "video/*", fg = "#458588" },
+  { mime = "audio/*", fg = "#b16286" },
+  { mime = "application/*", fg = "#cc241d" },
+  { mime = "text/*", fg = "#ebdbb2" },
+]
+

@@ -1,0 +1,116 @@
+# ==================================================
+# Zathura — Gruvbox Dark
+# ==================================================
+
+# Core colors
+set default-bg              "#282828"   # bg0
+set default-fg              "#ebdbb2"   # fg0
+
+# Status bar
+set statusbar-bg            "#3c3836"   # bg1
+set statusbar-fg            "#ebdbb2"
+
+# Input bar
+set inputbar-bg             "#282828"
+set inputbar-fg             "#ebdbb2"
+
+# Notification
+set notification-bg         "#3c3836"
+set notification-fg         "#ebdbb2"
+set notification-error-bg   "#cc241d"
+set notification-error-fg   "#282828"
+set notification-warning-bg "#d79921"
+set notification-warning-fg "#282828"
+
+# Completion menu
+set completion-bg           "#282828"
+set completion-fg           "#ebdbb2"
+set completion-group-bg     "#3c3836"
+set completion-group-fg     "#928374"
+
+set completion-highlight-bg "#98971a"   # green highlight
+set completion-highlight-fg "#282828"
+
+# Index / TOC
+set index-bg                "#282828"
+set index-fg                "#ebdbb2"
+set index-active-bg         "#98971a"
+set index-active-fg         "#282828"
+
+# Highlighting (search results)
+set highlight-color         "#fabd2f"   # strong yellow
+set highlight-active-color  "#b8bb26"   # bright green
+
+# Links
+set link-color              "#458588"   # blue
+
+# Page padding
+set page-padding            4
+
+# Selection (mouse)
+set selection-clipboard     clipboard
+
+# ==================================================
+# Vim-like keybindings
+# ==================================================
+
+# Quit
+map q quit
+
+# Scrolling (Vim-style)
+map j scroll down
+map k scroll up
+map h scroll left
+map l scroll right
+
+# Faster scrolling
+map J scroll down 3
+map K scroll up 3
+
+# Half-page scrolling
+map d scroll half-down
+map u scroll half-up
+
+# Full page
+map <C-d> scroll full-down
+map <C-u> scroll full-up
+
+# Zoom
+map + zoom in
+map - zoom out
+map = zoom in
+map z reset_zoom
+
+# Fit page / width
+map w adjust_window width
+map f adjust_window best-fit
+
+# Page navigation
+map gg goto top
+map G goto bottom
+map H goto previous
+map L goto next
+
+# Search (like Vim)
+map / search forward
+map ? search backward
+map n search next
+map N search previous
+
+# Toggle recolor (dark mode)
+map r recolor
+
+# Rotate pages
+map R rotate
+map <C-r> rotate_ccw
+
+# Reload document
+map <C-l> reload
+
+# Open index (TOC)
+map t toggle_index
+
+# Follow links
+map <Return> follow
+
+

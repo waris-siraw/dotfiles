@@ -1,0 +1,23 @@
+/* =================================================
+ * Rofi — Gruvbox Dark Soft
+ * List + prompt text in yellow
+ * Everything else untouched
+ * ================================================= */
+
+@theme "/usr/share/rofi/themes/gruvbox-dark-soft.rasi"
+
+/* Top "drun" label */
+prompt {
+    text-color: #d79921;
+}
+
+/* App list names */
+element-text {
+    text-color: #d79921;
+}
+
+/* Keep selected entry readable (default behavior) */
+element selected element-text {
+    text-color: inherit;
+}
+

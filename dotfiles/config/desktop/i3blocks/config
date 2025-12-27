@@ -1,0 +1,35 @@
+# =================================================
+# i3blocks — Gruvbox Dark
+# =================================================
+
+command=/usr/lib/i3blocks/$BLOCK_NAME
+separator=false
+markup=pango
+
+[memory]
+label=
+interval=5
+color=#458588
+
+[cpu]
+label=
+interval=5
+color=#98971a
+
+
+[date]
+command=echo "<span size='11000' foreground='#98971a'>$(date '+%a %d %b')</span>"
+interval=60
+
+[sep1]
+command=echo "<span size='11000' foreground='#928374'>│</span>"
+interval=once
+markup=pango
+
+
+[time]
+command=echo "<span size='11000' foreground='#d79921'>$(date '+%H:%M:%S')  </span>"
+interval=1
+
+
+

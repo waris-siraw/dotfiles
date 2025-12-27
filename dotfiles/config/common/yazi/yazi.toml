@@ -1,0 +1,11 @@
+# yazi.toml
+[mgr]
+show_hidden = false
+
+[theme]
+use = "custom"
+[manager]
+editor = "/usr/bin/nvim"
+[preview]
+image = true
+
