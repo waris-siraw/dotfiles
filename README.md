@@ -8,13 +8,20 @@ Personal Arch Linux dotfiles with i3wm and Gruvbox theme.
 ### 🖥️  Desktop
 ![Desktop](dotfiles/images/desktop.png)
 
+
 ### 🧑‍💻  yazi+vscode
-![i3](dotfiles/images/yazi_vscode.png)
+![yazi+vscode](dotfiles/images/yazi_vscode.png)
+
+
+### ⌨️  alacritty+pcmanFM
+![alacritty+pcmanFM](dotfiles/images/alacritty_pcmanFM.png)
+
 
 ### ⚙️  neovim+btop
-![Extra Screenshot](dotfiles/images/neovim_btop.png)
+![neovim+btop](dotfiles/images/neovim_btop.png)
+
 
 ### 🔔  dunst
-![Dunst Notification](dotfiles/images/dunst.png)
+![dunst](dotfiles/images/dunst.png)
 
 
