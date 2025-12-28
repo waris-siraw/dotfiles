@@ -1,89 +1,65 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-# ----------------------------------
-# Paths
-# ----------------------------------
-DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_DIR="$DOTFILES_DIR/config"
-PACKAGES_DIR="$DOTFILES_DIR/packages"
+# ------------------ resolve paths correctly ------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ----------------------------------
-# Helpers
-# ----------------------------------
-install_pacman() {
-  local file="$1"
+CONFIG_DIR="$SCRIPT_DIR/config/common"
+STOW_DIR="$SCRIPT_DIR/stow"
 
-  if [[ ! -f "$file" ]]; then
-    echo "Package file not found: $file"
-    exit 1
-  fi
+echo "Install script location: $SCRIPT_DIR"
+echo "Config source          : $CONFIG_DIR"
+echo "Stow output            : $STOW_DIR"
+echo
 
-  echo "Installing packages from $(basename "$file")"
-  grep -Ev '^\s*#|^\s*$' "$file" | xargs sudo pacman -S --needed
+# ------------------ checks ------------------
+command -v stow >/dev/null || {
+  echo "❌ GNU Stow is not installed"
+  exit 1
 }
 
-copy_config() {
-  local src="$1"
+# ------------------ clean stow dir ------------------
+echo "Cleaning stow directory…"
+rm -rf "$STOW_DIR"
+mkdir -p "$STOW_DIR"
 
-  if [[ ! -d "$src" ]]; then
-    echo "Config dir not found: $src"
-    exit 1
-  fi
+# ------------------ helper ------------------
+make_app_package () {
+  local app="$1"
 
-  echo "Copying config from $(basename "$src")"
-  mkdir -p ~/.config
-  cp -r "$src"/* ~/.config/
+  echo "→ $app"
+  mkdir -p "$STOW_DIR/$app/.config"
+  cp -r "$CONFIG_DIR/$app" "$STOW_DIR/$app/.config/$app"
 }
 
-# ----------------------------------
-# Profile selection
-# ----------------------------------
+# ------------------ apps (~/.config/<app>) ------------------
+APPS=(
+  alacritty
+  btop
+  dunst
+  fish
+  i3
+  i3blocks
+  nvim
+  rofi
+  yazi
+  zathura
+)
+
+for app in "${APPS[@]}"; do
+  if [[ -d "$CONFIG_DIR/$app" ]]; then
+    make_app_package "$app"
+  else
+    echo "⚠️  Skipping $app (not found in config/common)"
+  fi
+done
+
+# ------------------ stow ------------------
 echo
-echo "Select installation profile:"
-echo "1) Desktop"
-echo "2) Laptop"
+echo "Running stow…"
+cd "$STOW_DIR"
+stow "${APPS[@]}"
+
 echo
-
-read -rp "> " PROFILE_CHOICE
-
-case "$PROFILE_CHOICE" in
-  1) PROFILE="desktop" ;;
-  2) PROFILE="laptop" ;;
-  *) echo "Invalid choice"; exit 1 ;;
-esac
-
-# ----------------------------------
-# Packages
-# ----------------------------------
-install_pacman "$PACKAGES_DIR/common.pacman"
-install_pacman "$PACKAGES_DIR/$PROFILE.pacman"
-
-# ----------------------------------
-# Config files
-# ----------------------------------
-copy_config "$CONFIG_DIR/common"
-copy_config "$CONFIG_DIR/$PROFILE"
-
-# ----------------------------------
-# MIME defaults (optional)
-# ----------------------------------
-if [[ -f "$DOTFILES_DIR/mime/mimeapps.list" ]]; then
-  echo "Applying MIME defaults"
-  mkdir -p ~/.config
-  cp "$DOTFILES_DIR/mime/mimeapps.list" ~/.config/mimeapps.list
-fi
-
-# ----------------------------------
-# Done
-# ----------------------------------
-echo
-echo "----------------------------------"
-echo " Dotfiles install completed ✔"
-echo
-echo " Next manual steps:"
-echo " - Install GTK theme (gruvbox-dark-gtk)"
-echo " - Run Firefox once"
-echo " - Reboot (recommended)"
-echo "----------------------------------"
+echo "✔ Dotfiles installed successfully"
 
