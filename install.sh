@@ -1,15 +1,17 @@
 #!/bin/bash
 
 # --- Configuration Variables ---
-# DOTFILES_ROOT is the repository root (where the script is executed)
+# Assumes the script is run from the repository root
 DOTFILES_ROOT=$(pwd) 
 STOW_TARGET="$HOME"
 
-# Package files
-COMMON_PACMAN="$DOTFILES_ROOT/.pacman.common"
-DESKTOP_PACMAN="$DOTFILES_ROOT/.pacman.desktop"
-LAPTOP_PACMAN="$DOTFILES_ROOT/.pacman.laptop"
-# AUR files can also be added here (.aur.common, etc.)
+# Define the directory where package lists are stored
+PACKAGES_DIR="$DOTFILES_ROOT/dotfiles/packages"
+
+# Package files with .pacman extension
+COMMON_PACMAN="$PACKAGES_DIR/common.pacman"
+DESKTOP_PACMAN="$PACKAGES_DIR/desktop.pacman"
+LAPTOP_PACMAN="$PACKAGES_DIR/laptop.pacman"
 
 # --- Logging and Utility Functions ---
 
@@ -42,16 +44,17 @@ install_packages() {
     fi
     
     log "Updating package database..."
-    sudo pacman -Syu --noconfirm || { error "Update failed."; exit 1; }
+    sudo pacman -Syu --noconfirm || error "Database update failed. Proceeding with installation."
 
     PACKAGES_TO_INSTALL=""
     
     # 1. Common Packages (Always)
     if [ -f "$COMMON_PACMAN" ]; then
         log "Adding common packages from $COMMON_PACMAN."
+        # Use grep to filter out comments and empty lines
         PACKAGES_TO_INSTALL+=" $(grep -vE '^\s*#|^\s*$' "$COMMON_PACMAN" | xargs)"
     else
-        error "File $COMMON_PACMAN not found."
+        log "File $COMMON_PACMAN not found in $PACKAGES_DIR. Skipping common package installation."
     fi
 
     # 2. Specific Packages (Conditional)
@@ -61,57 +64,91 @@ install_packages() {
     elif [ "$DEVICE_TYPE" = "laptop" ] && [ -f "$LAPTOP_PACMAN" ]; then
         log "Adding LAPTOP-specific packages from $LAPTOP_PACMAN."
         PACKAGES_TO_INSTALL+=" $(grep -vE '^\s*#|^\s*$' "$LAPTOP_PACMAN" | xargs)"
+    else
+        log "No specific package list found for $DEVICE_TYPE (expected in $PACKAGES_DIR). Skipping this phase."
     fi
     
     # 3. Execute Installation
     if [ -n "$PACKAGES_TO_INSTALL" ]; then
         log "Installing total packages..."
-        sudo pacman -S --needed --noconfirm $PACKAGES_TO_INSTALL || error "Pacman package installation failed."
+        sudo pacman -S --needed --noconfirm $PACKAGES_TO_INSTALL || error "Pacman package installation failed for some packages."
     else
         log "No packages found for installation."
     fi
-    
-    # [Optional] Add logic for AUR files here (.aur.common, etc.)
 }
 
-# --- 2. Dotfiles Symlinking with Stow (Common + Specific) ---
+# --- 2. Dotfiles Symlinking with Stow (Double Stowing Logic) ---
 
 stow_dotfiles() {
     log "Starting symbolic link creation (symlinks) with GNU Stow..."
     
-    # *** KEY NAVIGATION ***
-    # Enter the "dotfiles" subdirectory which contains the Stow packages (your configs)
-    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find the 'dotfiles' subdirectory in $DOTFILES_ROOT"; exit 1; }
+    # KEY NAVIGATION: Enter the "dotfiles" subdirectory 
+    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find the 'dotfiles' subdirectory. Verify your repository structure."; exit 1; }
 
-    # Array of Stow packages to install
-    declare -a PACKAGES_TO_STOW=("common")
     
-    # Add the specific package (desktop or laptop)
-    if [ "$DEVICE_TYPE" = "desktop" ]; then
-        PACKAGES_TO_STOW+=("desktop")
-    elif [ "$DEVICE_TYPE" = "laptop" ]; then
-        PACKAGES_TO_STOW+=("laptop")
+    # --- STEP 1: STOW ROOT PACKAGES ---
+    
+    log "Stowing root level packages (e.g., zsh, tmux)..."
+    
+    # Trova solo le cartelle di primo livello che non iniziano con '.' (es. zsh, tmux)
+    ROOT_PACKAGES=$(find . -maxdepth 1 -mindepth 1 -type d \
+        -not -name '.*' \
+        -not -name 'packages' \
+        -not -name 'config' \
+        -not -name 'images' \
+        -exec basename {} \;)
+    
+    if [ -z "$ROOT_PACKAGES" ]; then
+        log "No root packages found to stow (excluding images/config/packages)."
     fi
-    
-    if [ ${#PACKAGES_TO_STOW[@]} -eq 0 ]; then
-        error "No packages defined for stowing."
-        return
-    fi
-    
-    for package in "${PACKAGES_TO_STOW[@]}"; do
-        if [ -d "$package" ]; then
-            log "Stowing package: $package ($package configuration)"
-            # -d . tells Stow to look in the current directory (i.e., dotfiles/)
-            stow -d . -t "$STOW_TARGET" -v -R "$package"
-            if [ $? -ne 0 ]; then
-                error "Stow failed for package $package. Check for conflicts in $STOW_TARGET (e.g., an existing file)."
-            fi
-        else
-            error "Stow package directory '$package' was not found in $(pwd)."
+
+    for package in $ROOT_PACKAGES; do
+        log "Stowing root package: $package"
+        # -R: Restow (sovrascrive link esistenti)
+        # --adopt: Adotta file preesistenti nel pacchetto, poi crea il link
+        stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
+        if [ $? -ne 0 ]; then
+            error "Stow failed for root package $package."
         fi
     done
+
+
+    # --- STEP 2: STOW NESTED CONFIG PACKAGES (common, desktop, laptop) ---
     
-    # Return to the repository root directory
+    if [ -d "config" ]; then
+        log "Stowing conditional config packages (common, desktop, laptop)..."
+        
+        # Navigate INTO the config folder.
+        cd "config" || { error "Failed to enter config directory."; cd ..; exit 1; }
+        
+        # Ordine: 'common' per primo, 'desktop' (specifico) per secondo per garantire la priorità.
+        declare -a CONDITIONAL_PACKAGES=("common")
+        
+        if [ "$DEVICE_TYPE" = "desktop" ] && [ -d "desktop" ]; then
+            CONDITIONAL_PACKAGES+=("desktop")
+        elif [ "$DEVICE_TYPE" = "laptop" ] && [ -d "laptop" ]; then
+            CONDITIONAL_PACKAGES+=("laptop")
+        fi
+        
+        # Iterate over the packages to be stowed from the 'config/' directory
+        for package in "${CONDITIONAL_PACKAGES[@]}"; do
+            if [ -d "$package" ]; then
+                log "Stowing conditional package: $package"
+                # Usa --adopt per risolvere conflitti con file non gestiti da Stow
+                stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
+                if [ $? -ne 0 ]; then
+                    error "Stow failed for conditional package $package. Check your internal directory structure (must be .config/app/) or if you have duplicate configurations (e.g., i3 in both common and desktop)."
+                fi
+            else
+                 error "Conditional package directory '$package' not found in config/."
+            fi
+        done
+        
+        # Go back up to dotfiles/ directory
+        cd ..
+    fi
+
+    log "Finished stowing. Returning to repository root."
     cd "$DOTFILES_ROOT"
 }
 
@@ -119,17 +156,14 @@ stow_dotfiles() {
 main() {
     log "Starting automated Dotfiles configuration"
     
-    # 0. Ask for device type
     prompt_device_type
-
-    # 1. Install packages (Common + Specific)
+    
     install_packages
 
-    # 2. Link Dotfiles (Common + Specific)
     stow_dotfiles
     
     log "\n✅ Configuration completed!"
-    log "To apply changes (e.g., Zsh config), you might need to restart your shell (e.g., 'exec zsh') or your graphical system."
+    log "To apply changes (e.g., Zsh config, if used), you might need to restart your shell (e.g., 'exec zsh') or your graphical system."
 }
 
 # Execute the main function
