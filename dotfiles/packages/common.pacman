@@ -13,6 +13,7 @@ man-pages
 flameshot
 xclip
 xsel
+stow
 
 #################################################
 # Window manager & bar
@@ -27,15 +28,12 @@ i3status
 alacritty
 fish
 tmux
-# smarter cd
 zoxide          
-# fuzzy finder
 fzf             
 #################################################
 # Editor & development
 #################################################
 neovim     
-# VS Code
 code
 
 #################################################
@@ -49,16 +47,12 @@ pcmanfm
 #################################################
 rofi
 dunst
-# notify-send (required by dunst, rofi scripts)
 libnotify       
 #################################################
 # Media viewers
 #################################################
-# Images + wallpaper
 feh
- # Document viewer
 zathura       
- # PDF plugin
 zathura-pdf-mupdf 
 
 #################################################
