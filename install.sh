@@ -3,9 +3,13 @@
 # --- Configuration Variables ---
 DOTFILES_ROOT=$(pwd) 
 STOW_TARGET="$HOME"
+# Path to the system backgrounds folder
+SYSTEM_BG_DIR="/usr/share/backgrounds"
 
 # Define the directory where package lists are stored
 PACKAGES_DIR="$DOTFILES_ROOT/dotfiles/packages"
+# Path to your specific Gruvbox image
+BG_IMAGE_SRC="$DOTFILES_ROOT/dotfiles/images/Grv_box.png"
 
 # Package files with .pacman extension
 COMMON_PACMAN="$PACKAGES_DIR/common.pacman"
@@ -49,13 +53,13 @@ install_packages() {
 
     PACKAGES_TO_INSTALL=""
     
-    # Add Common Packages
+    # Collect Common Packages
     if [ -f "$COMMON_PACMAN" ]; then
         log "Adding common packages from $COMMON_PACMAN..."
         PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$COMMON_PACMAN" | xargs) "
     fi
 
-    # Add Device-Specific Packages
+    # Collect Device-Specific Packages
     if [ "$DEVICE_TYPE" = "desktop" ] && [ -f "$DESKTOP_PACMAN" ]; then
         log "Adding DESKTOP packages from $DESKTOP_PACMAN..."
         PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$DESKTOP_PACMAN" | xargs)"
@@ -64,7 +68,7 @@ install_packages() {
         PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$LAPTOP_PACMAN" | xargs)"
     fi
     
-    # Execute single installation command
+    # Execute batch installation
     if [ -n "$(echo $PACKAGES_TO_INSTALL | xargs)" ]; then
         log "Installing all selected packages..."
         sudo pacman -S --needed --noconfirm $PACKAGES_TO_INSTALL || error "Some packages failed to install."
@@ -73,43 +77,64 @@ install_packages() {
     fi
 }
 
-# --- 2. Shell Management (Fish) ---
+# --- 2. Background Setup ---
+
+setup_backgrounds() {
+    log "Setting up system background directory..."
+    
+    # Create the backgrounds directory if it doesn't exist
+    if [ ! -d "$SYSTEM_BG_DIR" ]; then
+        log "Creating $SYSTEM_BG_DIR (requires sudo)..."
+        sudo mkdir -p "$SYSTEM_BG_DIR"
+    fi
+
+    # Check if the Gruvbox image exists in your repo
+    if [ -f "$BG_IMAGE_SRC" ]; then
+        log "Linking Grv_box.png to system backgrounds..."
+        # Create a symbolic link in the system folder pointing to your repo
+        sudo ln -snf "$BG_IMAGE_SRC" "$SYSTEM_BG_DIR/Grv_box.png"
+    else
+        error "Background image not found at $BG_IMAGE_SRC. Skipping link."
+    fi
+}
+
+# --- 3. Shell Management (Fish) ---
 
 setup_fish_shell() {
-    log "Configuring Fish shell..."
+    log "Checking Fish shell configuration..."
     
-    # Ensure fish is installed (it should be in your common.pacman, but this is a safety check)
     if ! command -v fish &> /dev/null; then
-        log "Fish not found. Installing now..."
+        log "Fish not found. Installing..."
         sudo pacman -S --noconfirm fish
     fi
 
     FISH_PATH=$(which fish)
 
-    # Check if Fish is already the default shell
+    # Change default shell if it's not already Fish
     if [[ "$SHELL" != "$FISH_PATH" ]]; then
         log "Setting Fish as the default shell..."
         
-        # Add Fish to /etc/shells if not already present
+        # Ensure fish is in /etc/shells
         if ! grep -q "$FISH_PATH" /etc/shells; then
             echo "$FISH_PATH" | sudo tee -a /etc/shells
         fi
         
-        # Change shell for the current user
         sudo chsh -s "$FISH_PATH" "$USER"
-        log "Default shell changed to $FISH_PATH"
+        log "Shell updated to Fish. Changes apply after next login."
     else
         log "Fish is already your default shell."
     fi
 }
 
-# --- 3. Dotfiles Symlinking with Stow ---
+# --- 4. Dotfiles Symlinking with Stow ---
 
 stow_dotfiles() {
     log "Starting symlink creation with GNU Stow..."
-    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find 'dotfiles' directory."; exit 1; }
+    
+    # Navigate to the dotfiles directory relative to script location
+    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find 'dotfiles' subdirectory."; exit 1; }
 
-    # Step 1: Stow root level directories (zsh, tmux, nvim, etc.)
+    # Step 1: Stow root level directories (e.g., zsh, nvim, tmux)
     log "Stowing root packages..."
     ROOT_PACKAGES=$(find . -maxdepth 1 -mindepth 1 -type d \
         -not -name '.*' -not -name 'packages' -not -name 'config' -not -name 'images' \
@@ -117,12 +142,13 @@ stow_dotfiles() {
     
     for package in $ROOT_PACKAGES; do
         log "Stowing: $package"
+        # --adopt helps integrate existing files by moving them into the repo
         stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
     done
 
-    # Step 2: Stow nested config packages
+    # Step 2: Stow nested config packages (common, desktop, laptop)
     if [ -d "config" ]; then
-        log "Stowing conditional configs from config/..."
+        log "Stowing nested configurations..."
         cd "config" || { error "Failed to enter config directory."; cd ..; exit 1; }
         
         declare -a CONDITIONAL_PACKAGES=("common")
@@ -138,18 +164,18 @@ stow_dotfiles() {
         cd ..
     fi
 
-    log "Stowing finished. Returning to repository root."
+    log "Finished stowing. Returning to root."
     cd "$DOTFILES_ROOT"
 }
 
-# --- 4. Post-Stow Actions ---
+# --- 5. Post-Stow Actions ---
 
 nvim_plugin_install() {
     if command -v nvim &> /dev/null; then
-        log "Installing Neovim plugins..."
+        log "Running Neovim plugin installation..."
         nvim --headless +PlugInstall +qall
     else
-        log "Neovim not found. Skipping plugin installation."
+        log "Neovim not installed. Skipping plugins."
     fi
 }
 
@@ -169,12 +195,15 @@ main() {
     
     setup_fish_shell
     
+    setup_backgrounds
+    
     stow_dotfiles
     
     nvim_plugin_install
     
-    log "\n✅ Configuration completed successfully!"
-    log "Please log out and log back in (or restart) to apply the shell changes."
+    log "\n✅ Installation complete!"
+    log "Note: Your background is linked at: $SYSTEM_BG_DIR/Grv_box.png"
+    log "Please log out and back in to start using Fish by default."
 }
 
 main
