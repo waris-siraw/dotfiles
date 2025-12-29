@@ -9,7 +9,7 @@ Personal Arch Linux dotfiles with i3wm and Gruvbox theme.
 ![Desktop](dotfiles/images/desktop.png)
 
 
-### 💻  laptop
+### 💻  Laptop
 ![laptop](dotfiles/images/laptop.png)
 
 
