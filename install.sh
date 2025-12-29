@@ -8,7 +8,7 @@ SYSTEM_BG_DIR="/usr/share/backgrounds"
 
 # Define the directory where package lists are stored
 PACKAGES_DIR="$DOTFILES_ROOT/dotfiles/packages"
-# Path to your specific Gruvbox image
+# Path to background
 BG_IMAGE_SRC="$DOTFILES_ROOT/dotfiles/images/Grv_box.png"
 
 # Package files with .pacman extension
@@ -88,7 +88,7 @@ setup_backgrounds() {
         sudo mkdir -p "$SYSTEM_BG_DIR"
     fi
 
-    # Check if the Gruvbox image exists in your repo
+    # Check if the background image exists in your repo
     if [ -f "$BG_IMAGE_SRC" ]; then
         log "Linking Grv_box.png to system backgrounds..."
         # Create a symbolic link in the system folder pointing to your repo
@@ -203,7 +203,7 @@ main() {
     
     log "\n✅ Installation complete!"
     log "Note: Your background is linked at: $SYSTEM_BG_DIR/Grv_box.png"
-    log "Please log out and back in to start using Fish by default."
+    log "Please reboot your system. This action is necessary to complete the installation and fully integrate essential components."
 }
 
 main

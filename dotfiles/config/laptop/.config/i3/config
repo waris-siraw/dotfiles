@@ -9,7 +9,7 @@ set $mod Mod4
 font pango:monospace 8
 
 #######################################################################
-# 01) GRUVBOX DARK PALETTE (btop-matched)
+# 01) GRUVBOX_DARK
 #######################################################################
 set $bg0   #282828
 set $bg1   #3c3836
@@ -38,10 +38,42 @@ exec --no-startup-id picom
 exec_always --no-startup-id feh --bg-scale /usr/share/backgrounds/Grv_box.png
 
 #######################################################################
-# 03) AUDIO KEYS (bindings preserved)
+# 03) LAPTOP CONTROLS 
 #######################################################################
-#Refresh i3blocks.
-# Keys unchanged.
+
+# Volume up
+bindsym XF86AudioRaiseVolume exec --no-startup-id amixer -q set Master 5%+
+
+# Volume down
+bindsym XF86AudioLowerVolume exec --no-startup-id amixer -q set Master 5%-
+
+# Mute toggle
+bindsym XF86AudioMute exec --no-startup-id amixer -q set Master toggle
+
+
+# --- Media playback control ---
+# Play / Pause
+bindsym XF86AudioPlay exec --no-startup-id playerctl play-pause
+
+# Next track
+bindsym XF86AudioNext exec --no-startup-id playerctl next
+
+# Previous track
+bindsym XF86AudioPrev exec --no-startup-id playerctl previous
+
+
+# --- Brightness control ---
+# Increase brightness
+bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set +10%
+
+# Decrease brightness
+bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
+
+
+# --- Lock screen + suspend ---
+# Mod+o locks the screen and suspends the system
+bindsym $mod+o exec --no-startup-id i3lock -c 000000 && systemctl suspend
+
 #######################################################################
 # 04) WINDOW BEHAVIOR
 #######################################################################
@@ -52,7 +84,7 @@ tiling_drag modifier titlebar
 for_window [class=".*"] border pixel 0
 
 #######################################################################
-# 05) APP LAUNCH / BASIC BINDS (unchanged)
+# 05) APP LAUNCH / BASIC BINDS 
 #######################################################################
 bindsym $mod+Return exec alacritty
 bindsym $mod+q kill
@@ -62,7 +94,7 @@ bindsym Print exec --no-startup-id flameshot gui
 
 
 #######################################################################
-# 06) FOCUS MOVEMENT (unchanged)
+# 06) FOCUS MOVEMENT 
 #######################################################################
 bindsym $mod+j focus left
 bindsym $mod+k focus down
@@ -75,7 +107,7 @@ bindsym $mod+Up focus up
 bindsym $mod+Right focus right
 
 #######################################################################
-# 07) MOVE WINDOWS (unchanged)
+# 07) MOVE WINDOWS 
 #######################################################################
 bindsym $mod+Shift+j move left
 bindsym $mod+Shift+k move down
@@ -88,7 +120,7 @@ bindsym $mod+Shift+Up move up
 bindsym $mod+Shift+Right move right
 
 #######################################################################
-# 08) LAYOUT / MODES (unchanged)
+# 08) LAYOUT / MODES 
 #######################################################################
 bindsym $mod+h split h
 bindsym $mod+v split v
@@ -103,7 +135,7 @@ bindsym $mod+space focus mode_toggle
 bindsym $mod+a focus parent
 
 #######################################################################
-# 09) WORKSPACES (unchanged)
+# 09) WORKSPACES 
 #######################################################################
 set $ws1 "1"
 set $ws2 "2"
@@ -139,14 +171,14 @@ bindsym $mod+Shift+9 move container to workspace number $ws9
 bindsym $mod+Shift+0 move container to workspace number $ws10
 
 #######################################################################
-# 10) RELOAD / RESTART / EXIT (unchanged)
+# 10) RELOAD / RESTART / EXIT 
 #######################################################################
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
 #######################################################################
-# 11) RESIZE MODE (unchanged)
+# 11) RESIZE MODE 
 #######################################################################
 mode "resize" {
         bindsym j resize shrink width 10 px or 10 ppt
@@ -166,7 +198,7 @@ mode "resize" {
 bindsym $mod+r mode "resize"
 
 #######################################################################
-# 12) GAPS (unchanged values + your gap binds kept)
+# 12) GAPS 
 #######################################################################
 gaps inner 8
 gaps outer 1
@@ -176,22 +208,20 @@ bindsym $mod+minus gaps inner current plus 5
 bindsym $mod+equal gaps inner current minus 5
 
 #######################################################################
-# 13) BAR TOGGLE (kept)
+# 13) BAR TOGGLE 
 #######################################################################
 bindsym $mod+b bar mode toggle
 
 #######################################################################
-# 14) STATUS BAR (i3blocks) — bottom + GRUVBOX DARK
+# 14) STATUS BAR (i3blocks) GRUVBOX DARK
 #######################################################################
 bar {
     status_command i3blocks
     position bottom
     mode dock
 
-    # Keep your font line exactly (unchanged)
     font pango:JetBrains Mono 8, Font Awesome 8
 
-    # Keep tray disabled (your request earlier)
     tray_output none
 
     colors {
@@ -205,42 +235,4 @@ bar {
        urgent_workspace   $red    $bg0  $fg0
     }
 }
-
-
-#######################################################################
-# 15) LAPTOP CONTROL
-#######################################################################
-# --- Brightness control ---
-# Increase brightness
-bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set +10%
-
-# Decrease brightness
-bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
-
-
-# --- Audio volume control (amixer) ---
-# Volume up
-bindsym XF86AudioRaiseVolume exec --no-startup-id amixer -q set Master 5%+
-
-# Volume down
-bindsym XF86AudioLowerVolume exec --no-startup-id amixer -q set Master 5%-
-
-# Mute toggle
-bindsym XF86AudioMute exec --no-startup-id amixer -q set Master toggle
-
-
-# --- Media playback control ---
-# Play / Pause
-bindsym XF86AudioPlay exec --no-startup-id playerctl play-pause
-
-# Next track
-bindsym XF86AudioNext exec --no-startup-id playerctl next
-
-# Previous track
-bindsym XF86AudioPrev exec --no-startup-id playerctl previous
-
-
-# --- Lock screen + suspend ---
-# Mod+o locks the screen and suspends the system
-bindsym $mod+o exec --no-startup-id i3lock -c 000000 && systemctl suspend
 

@@ -1,7 +1,5 @@
 /* =================================================
  * Rofi — Gruvbox Dark Soft
- * List + prompt text in yellow
- * Everything else untouched
  * ================================================= */
 
 @theme "/usr/share/rofi/themes/gruvbox-dark-soft.rasi"
@@ -16,7 +14,7 @@ element-text {
     text-color: #d79921;
 }
 
-/* Keep selected entry readable (default behavior) */
+/* Keep selected entry readable */
 element selected element-text {
     text-color: inherit;
 }
