@@ -9,6 +9,10 @@ Personal Arch Linux dotfiles with i3wm and Gruvbox theme.
 ![Desktop](dotfiles/images/desktop.png)
 
 
+### 💻  laptop
+![laptop](dotfiles/images/laptop.png)
+
+
 ### 🧑‍💻  yazi+vscode
 ![yazi+vscode](dotfiles/images/yazi_vscode.png)
 
@@ -23,5 +27,4 @@ Personal Arch Linux dotfiles with i3wm and Gruvbox theme.
 
 ### 🔔  dunst
 ![dunst](dotfiles/images/dunst.png)
-
 
