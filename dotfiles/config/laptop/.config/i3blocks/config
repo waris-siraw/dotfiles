@@ -1,35 +1,42 @@
 # =================================================
-# i3blocks — Gruvbox Dark
+# i3blocks — Gruvbox Dark (Left-Shifted Icons)
 # =================================================
 
 command=/usr/lib/i3blocks/$BLOCK_NAME
 separator=false
 markup=pango
 
-[memory]
-label=
-interval=5
-color=#458588
+# --- WiFi (Aqua) ---
+# Added leading spaces to push it left within the block
+[wifi]
+command=if [ "$BLOCK_BUTTON" -eq 1 ]; then nm-connection-editor; fi; SSID=$(nmcli -t -f ACTIVE,SSID dev wifi | grep '^yes' | cut -d: -f2); [ -z "$SSID" ] && SSID="Down"; echo "   <span foreground=\"#689d6a\">    </span><span foreground=\"#8ec07c\">$SSID </span>"
+interval=10
 
-[cpu]
-label=
-interval=5
-color=#98971a
+[sep]
+command=echo "<span foreground='#928374'>│ </span>"
+interval=once
 
+# --- Bluetooth (Dark Blue) ---
+[bluetooth]
+command=if [ "$BLOCK_BUTTON" -eq 1 ]; then blueman-manager; fi; rfkill list bluetooth | grep -q "blocked: yes" && STATUS="Off" || STATUS="On"; echo "<span foreground=\"#076678\">  </span><span foreground=\"#458588\">$STATUS </span>"
+interval=10
 
+[sep]
+command=echo "<span foreground='#928374'>│ </span>"
+interval=once
+
+# --- Date (Green) ---
+# Added leading spaces to push the calendar left
 [date]
-command=echo "<span size='11000' foreground='#98971a'>$(date '+%a %d %b')</span>"
+command=echo "<span foreground='#98971a'>   $(date '+%a %d %b') </span>"
 interval=60
 
-[sep1]
-command=echo "<span size='11000' foreground='#928374'>│</span>"
+[sep]
+command=echo "<span foreground='#928374'>│ </span>"
 interval=once
-markup=pango
 
-
+# --- Time (Yellow) ---
+# Added leading spaces to push the clock left
 [time]
-command=echo "<span size='11000' foreground='#d79921'>$(date '+%H:%M:%S')  </span>"
+command=echo "<span foreground='#d79921'>   $(date '+%H:%M:%S')   </span>"
 interval=1
-
-
-
