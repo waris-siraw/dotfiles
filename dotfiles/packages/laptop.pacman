@@ -1,26 +1,10 @@
-#################################################
-# Laptop extras
-#################################################
-
-# Power management
 tlp
-
-# Brightness control
+playerctl
 brightnessctl
-
-# ACPI events (lid close, power button)
 acpid
-
-# Network manager applet (Wi-Fi tray)
 network-manager-applet
-
-# Touchpad & gestures
 xf86-input-libinput
-
-# Webcam (se presente)
 v4l-utils
-
-# Bluetooth 
 bluez
 bluez-utils
 blueman
