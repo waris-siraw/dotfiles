@@ -15,3 +15,4 @@ colorscheme gruvbox
 
 set mouse=
 
+set clipboard=unnamedplus
