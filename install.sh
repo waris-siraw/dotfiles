@@ -15,21 +15,23 @@ LAPTOP_PACMAN="$PACKAGES_DIR/laptop.pacman"
 # --- Logging and Utility Functions ---
 
 log() {
-    echo -e "\n\033[1;34m>>> $1\033[0m" # Message in blue
+    echo -e "\n\033[1;34m>>> $1\033[0m" # Blue message
 }
 
 error() {
-    echo -e "\033[1;31m!!! ERROR: $1\033[0m" >&2 # Error message in red to stderr
+    echo -e "\033[1;31m!!! ERROR: $1\033[0m" >&2 # Red message to stderr
 }
 
 prompt_device_type() {
     while true; do
-        echo -e "\n\033[1;33mWhich device are you installing on?\033[0m"
-        read -r -p "Type [d] for Desktop or [l] for Laptop: " choice
+        echo -e "\n\033[1;33mWhich device are you configuring?\033[0m"
+        echo "1) Desktop"
+        echo "2) Laptop"
+        read -r -p "Select an option [1-2]: " choice
         case "$choice" in
-            [Dd]* ) DEVICE_TYPE="desktop"; break;;
-            [Ll]* ) DEVICE_TYPE="laptop"; break;;
-            * ) echo "Invalid choice. Please try again.";;
+            1 ) DEVICE_TYPE="desktop"; break;;
+            2 ) DEVICE_TYPE="laptop"; break;;
+            * ) echo "Invalid choice. Please enter 1 or 2.";;
         esac
     done
 }
@@ -37,148 +39,142 @@ prompt_device_type() {
 # --- 1. Package Installation ---
 
 install_packages() {
-    log "Checking for and installing GNU Stow..."
+    log "Checking for GNU Stow..."
     if ! command -v stow &> /dev/null; then
-        sudo pacman -S --noconfirm stow || { error "Failed to install GNU Stow. Exiting."; exit 1; }
+        sudo pacman -S --noconfirm stow || { error "Failed to install Stow. Exiting."; exit 1; }
     fi
     
     log "Updating package database..."
-    sudo pacman -Syu --noconfirm || error "Database update failed. Proceeding with installation."
+    sudo pacman -Syu --noconfirm || error "Database update failed. Proceeding anyway."
 
     PACKAGES_TO_INSTALL=""
     
-    # 1. Common Packages (Always)
+    # Add Common Packages
     if [ -f "$COMMON_PACMAN" ]; then
-        log "Adding common packages from $COMMON_PACMAN."
-        PACKAGES_TO_INSTALL+=" $(grep -vE '^\s*#|^\s*$' "$COMMON_PACMAN" | xargs)"
-    else
-        log "File $COMMON_PACMAN not found in $PACKAGES_DIR. Skipping common package installation."
+        log "Adding common packages from $COMMON_PACMAN..."
+        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$COMMON_PACMAN" | xargs) "
     fi
 
-    # 2. Specific Packages (Conditional)
+    # Add Device-Specific Packages
     if [ "$DEVICE_TYPE" = "desktop" ] && [ -f "$DESKTOP_PACMAN" ]; then
-        log "Adding DESKTOP-specific packages from $DESKTOP_PACMAN."
-        PACKAGES_TO_INSTALL+=" $(grep -vE '^\s*#|^\s*$' "$DESKTOP_PACMAN" | xargs)"
+        log "Adding DESKTOP packages from $DESKTOP_PACMAN..."
+        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$DESKTOP_PACMAN" | xargs)"
     elif [ "$DEVICE_TYPE" = "laptop" ] && [ -f "$LAPTOP_PACMAN" ]; then
-        log "Adding LAPTOP-specific packages from $LAPTOP_PACMAN."
-        PACKAGES_TO_INSTALL+=" $(grep -vE '^\s*#|^\s*$' "$LAPTOP_PACMAN" | xargs)"
-    else
-        log "No specific package list found for $DEVICE_TYPE (expected in $PACKAGES_DIR). Skipping this phase."
+        log "Adding LAPTOP packages from $LAPTOP_PACMAN..."
+        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$LAPTOP_PACMAN" | xargs)"
     fi
     
-    # 3. Execute Installation
-    if [ -n "$PACKAGES_TO_INSTALL" ]; then
-        log "Installing total packages..."
-        sudo pacman -S --needed --noconfirm $PACKAGES_TO_INSTALL || error "Pacman package installation failed for some packages."
+    # Execute single installation command
+    if [ -n "$(echo $PACKAGES_TO_INSTALL | xargs)" ]; then
+        log "Installing all selected packages..."
+        sudo pacman -S --needed --noconfirm $PACKAGES_TO_INSTALL || error "Some packages failed to install."
     else
         log "No packages found for installation."
     fi
 }
 
-# --- 2. Dotfiles Symlinking with Stow ---
+# --- 2. Shell Management (Fish) ---
 
-stow_dotfiles() {
-    log "Starting symbolic link creation (symlinks) with GNU Stow..."
+setup_fish_shell() {
+    log "Configuring Fish shell..."
     
-    # KEY NAVIGATION: Enter the "dotfiles" subdirectory 
-    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find the 'dotfiles' subdirectory. Verify your repository structure."; exit 1; }
-
-    
-    # --- STEP 1: STOW ROOT PACKAGES ---
-    
-    log "Stowing root level packages (e.g., zsh, tmux)..."
-    
-    ROOT_PACKAGES=$(find . -maxdepth 1 -mindepth 1 -type d \
-        -not -name '.*' \
-        -not -name 'packages' \
-        -not -name 'config' \
-        -not -name 'images' \
-        -exec basename {} \;)
-    
-    if [ -z "$ROOT_PACKAGES" ]; then
-        log "No root packages found to stow (excluding images/config/packages)."
+    # Ensure fish is installed (it should be in your common.pacman, but this is a safety check)
+    if ! command -v fish &> /dev/null; then
+        log "Fish not found. Installing now..."
+        sudo pacman -S --noconfirm fish
     fi
 
-    for package in $ROOT_PACKAGES; do
-        log "Stowing root package: $package"
-        stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
-        if [ $? -ne 0 ]; then
-            error "Stow failed for root package $package."
+    FISH_PATH=$(which fish)
+
+    # Check if Fish is already the default shell
+    if [[ "$SHELL" != "$FISH_PATH" ]]; then
+        log "Setting Fish as the default shell..."
+        
+        # Add Fish to /etc/shells if not already present
+        if ! grep -q "$FISH_PATH" /etc/shells; then
+            echo "$FISH_PATH" | sudo tee -a /etc/shells
         fi
+        
+        # Change shell for the current user
+        sudo chsh -s "$FISH_PATH" "$USER"
+        log "Default shell changed to $FISH_PATH"
+    else
+        log "Fish is already your default shell."
+    fi
+}
+
+# --- 3. Dotfiles Symlinking with Stow ---
+
+stow_dotfiles() {
+    log "Starting symlink creation with GNU Stow..."
+    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find 'dotfiles' directory."; exit 1; }
+
+    # Step 1: Stow root level directories (zsh, tmux, nvim, etc.)
+    log "Stowing root packages..."
+    ROOT_PACKAGES=$(find . -maxdepth 1 -mindepth 1 -type d \
+        -not -name '.*' -not -name 'packages' -not -name 'config' -not -name 'images' \
+        -exec basename {} \;)
+    
+    for package in $ROOT_PACKAGES; do
+        log "Stowing: $package"
+        stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
     done
 
-
-    # --- STEP 2: STOW NESTED CONFIG PACKAGES (common, desktop, laptop) ---
-    
+    # Step 2: Stow nested config packages
     if [ -d "config" ]; then
-        log "Stowing conditional config packages (common, desktop, laptop)..."
-        
-        # Navigate INTO the config folder.
+        log "Stowing conditional configs from config/..."
         cd "config" || { error "Failed to enter config directory."; cd ..; exit 1; }
         
         declare -a CONDITIONAL_PACKAGES=("common")
-        
-        if [ "$DEVICE_TYPE" = "desktop" ] && [ -d "desktop" ]; then
-            CONDITIONAL_PACKAGES+=("desktop")
-        elif [ "$DEVICE_TYPE" = "laptop" ] && [ -d "laptop" ]; then
-            CONDITIONAL_PACKAGES+=("laptop")
-        fi
+        [ "$DEVICE_TYPE" = "desktop" ] && CONDITIONAL_PACKAGES+=("desktop")
+        [ "$DEVICE_TYPE" = "laptop" ] && CONDITIONAL_PACKAGES+=("laptop")
         
         for package in "${CONDITIONAL_PACKAGES[@]}"; do
             if [ -d "$package" ]; then
                 log "Stowing conditional package: $package"
                 stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
-                if [ $? -ne 0 ]; then
-                    error "Stow failed for conditional package $package. Check your internal directory structure or duplicated configurations."
-                fi
-            else
-                 error "Conditional package directory '$package' not found in config/."
             fi
         done
-        
-        # Go back up to dotfiles/ directory
         cd ..
     fi
 
-    log "Finished stowing. Returning to repository root."
+    log "Stowing finished. Returning to repository root."
     cd "$DOTFILES_ROOT"
 }
 
-# --- 3. Post-Stow Actions ---
+# --- 4. Post-Stow Actions ---
 
 nvim_plugin_install() {
-    # Assuming Neovim config (nvim) is managed by Stow and installed in $HOME/.config/nvim
     if command -v nvim &> /dev/null; then
-        log "Starting Neovim plugin installation (PlugInstall)..."
-        # Run nvim in headless mode, execute PlugInstall, and quit all
+        log "Installing Neovim plugins..."
         nvim --headless +PlugInstall +qall
-        if [ $? -eq 0 ]; then
-            log "Neovim plugins installed successfully."
-        else
-            error "Neovim plugin installation failed. Check your network or nvim setup."
-        fi
     else
         log "Neovim not found. Skipping plugin installation."
     fi
 }
 
-
 # --- Main Execution ---
+
 main() {
-    log "Starting automated Dotfiles configuration"
-    
+    # Greeting
+    echo -e "\033[1;35m"
+    echo "##########################"
+    echo "#      Hello, Waris!     #"
+    echo "##########################"
+    echo -e "\033[0m"
+
     prompt_device_type
     
     install_packages
-
+    
+    setup_fish_shell
+    
     stow_dotfiles
     
-    # 3. Run Post-Stow Actions
     nvim_plugin_install
     
-    log "\n✅ Configuration completed!"
-    log "To apply changes (e.g., Zsh config, if used), you might need to restart your shell (e.g., 'exec zsh') or your graphical system."
+    log "\n✅ Configuration completed successfully!"
+    log "Please log out and log back in (or restart) to apply the shell changes."
 }
 
-# Execute the main function
 main
