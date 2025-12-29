@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # --- Configuration Variables ---
-# Assumes the script is run from the repository root
 DOTFILES_ROOT=$(pwd) 
 STOW_TARGET="$HOME"
 
@@ -35,7 +34,7 @@ prompt_device_type() {
     done
 }
 
-# --- 1. Package Installation (Common + Specific) ---
+# --- 1. Package Installation ---
 
 install_packages() {
     log "Checking for and installing GNU Stow..."
@@ -51,7 +50,6 @@ install_packages() {
     # 1. Common Packages (Always)
     if [ -f "$COMMON_PACMAN" ]; then
         log "Adding common packages from $COMMON_PACMAN."
-        # Use grep to filter out comments and empty lines
         PACKAGES_TO_INSTALL+=" $(grep -vE '^\s*#|^\s*$' "$COMMON_PACMAN" | xargs)"
     else
         log "File $COMMON_PACMAN not found in $PACKAGES_DIR. Skipping common package installation."
@@ -77,7 +75,7 @@ install_packages() {
     fi
 }
 
-# --- 2. Dotfiles Symlinking with Stow (Double Stowing Logic) ---
+# --- 2. Dotfiles Symlinking with Stow ---
 
 stow_dotfiles() {
     log "Starting symbolic link creation (symlinks) with GNU Stow..."
@@ -90,7 +88,6 @@ stow_dotfiles() {
     
     log "Stowing root level packages (e.g., zsh, tmux)..."
     
-    # Trova solo le cartelle di primo livello che non iniziano con '.' (es. zsh, tmux)
     ROOT_PACKAGES=$(find . -maxdepth 1 -mindepth 1 -type d \
         -not -name '.*' \
         -not -name 'packages' \
@@ -104,8 +101,6 @@ stow_dotfiles() {
 
     for package in $ROOT_PACKAGES; do
         log "Stowing root package: $package"
-        # -R: Restow (sovrascrive link esistenti)
-        # --adopt: Adotta file preesistenti nel pacchetto, poi crea il link
         stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
         if [ $? -ne 0 ]; then
             error "Stow failed for root package $package."
@@ -121,7 +116,6 @@ stow_dotfiles() {
         # Navigate INTO the config folder.
         cd "config" || { error "Failed to enter config directory."; cd ..; exit 1; }
         
-        # Ordine: 'common' per primo, 'desktop' (specifico) per secondo per garantire la priorità.
         declare -a CONDITIONAL_PACKAGES=("common")
         
         if [ "$DEVICE_TYPE" = "desktop" ] && [ -d "desktop" ]; then
@@ -130,14 +124,12 @@ stow_dotfiles() {
             CONDITIONAL_PACKAGES+=("laptop")
         fi
         
-        # Iterate over the packages to be stowed from the 'config/' directory
         for package in "${CONDITIONAL_PACKAGES[@]}"; do
             if [ -d "$package" ]; then
                 log "Stowing conditional package: $package"
-                # Usa --adopt per risolvere conflitti con file non gestiti da Stow
                 stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
                 if [ $? -ne 0 ]; then
-                    error "Stow failed for conditional package $package. Check your internal directory structure (must be .config/app/) or if you have duplicate configurations (e.g., i3 in both common and desktop)."
+                    error "Stow failed for conditional package $package. Check your internal directory structure or duplicated configurations."
                 fi
             else
                  error "Conditional package directory '$package' not found in config/."
@@ -152,6 +144,25 @@ stow_dotfiles() {
     cd "$DOTFILES_ROOT"
 }
 
+# --- 3. Post-Stow Actions ---
+
+nvim_plugin_install() {
+    # Assuming Neovim config (nvim) is managed by Stow and installed in $HOME/.config/nvim
+    if command -v nvim &> /dev/null; then
+        log "Starting Neovim plugin installation (PlugInstall)..."
+        # Run nvim in headless mode, execute PlugInstall, and quit all
+        nvim --headless +PlugInstall +qall
+        if [ $? -eq 0 ]; then
+            log "Neovim plugins installed successfully."
+        else
+            error "Neovim plugin installation failed. Check your network or nvim setup."
+        fi
+    else
+        log "Neovim not found. Skipping plugin installation."
+    fi
+}
+
+
 # --- Main Execution ---
 main() {
     log "Starting automated Dotfiles configuration"
@@ -161,6 +172,9 @@ main() {
     install_packages
 
     stow_dotfiles
+    
+    # 3. Run Post-Stow Actions
+    nvim_plugin_install
     
     log "\n✅ Configuration completed!"
     log "To apply changes (e.g., Zsh config, if used), you might need to restart your shell (e.g., 'exec zsh') or your graphical system."
