@@ -1,7 +1,7 @@
-# dotfiles
+# Dotfiles
 Personal Arch Linux dotfiles with i3wm and Gruvbox theme.
 ---
-# Instructions
+## Instructions
 
 Clone the repository **inside your home directory** (recommended location: `~/Github`), make the installer executable, and run it:
 
@@ -9,7 +9,7 @@ Clone the repository **inside your home directory** (recommended location: `~/Gi
 mkdir -p ~/Github
 cd ~/Github
 git clone https://github.com/waris-siraw/dotfiles.git
-cd dotfiles/dotfiles
+cd /dotfiles
 chmod +x install.sh
 ./install.sh
 ```
