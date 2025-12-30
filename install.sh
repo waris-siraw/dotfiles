@@ -16,6 +16,11 @@ COMMON_PACMAN="$PACKAGES_DIR/common.pacman"
 DESKTOP_PACMAN="$PACKAGES_DIR/desktop.pacman"
 LAPTOP_PACMAN="$PACKAGES_DIR/laptop.pacman"
 
+# Neovim plugin manager (vim-plug) URL
+VIM_PLUG_URL="https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+# Destination uses XDG standard, falling back to ~/.config
+VIM_PLUG_DESTINATION="${XDG_CONFIG_HOME:-$HOME/.config}/nvim/autoload/plug.vim"
+
 # --- Logging and Utility Functions ---
 
 log() {
@@ -40,7 +45,68 @@ prompt_device_type() {
     done
 }
 
-# --- 1. Package Installation ---
+# --- CRITICAL OVERWRITE FUNCTION ---
+# This function forces the content of the repository to be linked, 
+# deleting any conflicting, non-symlinked files/directories in the system.
+stow_force_overwrite() {
+    local package_name=$1
+    local repo_path=$2 # Directory in the repo where the package resides (e.g., dotfiles or dotfiles/config)
+    local target_dir=$3 # Destination directory on the system (e.g., $HOME or $HOME/.config)
+
+    log "Handling package: $package_name (FORCING REPOSITORY CONTENT over $target_dir)"
+    
+    # 1. Navigate to the package root directory in the repository
+    cd "$DOTFILES_ROOT/$repo_path" || { error "Could not enter repo path: $repo_path"; return 1; }
+    
+    # --- FATAL ERROR CHECK FOR DOUBLE .CONFIG ---
+    if [ "$target_dir" = "$HOME/.config" ] && [ -d "$package_name/.config" ]; then
+        error "!!! FATAL ERROR: DOUBLE .CONFIG DETECTED IN REPOSITORY STRUCTURE !!!"
+        error "The package '$package_name' contains an inner '.config' directory ('$package_name/.config')."
+        error "This will result in '$HOME/.config/.config'. Please remove the inner '.config' folder from your repository."
+        cd "$DOTFILES_ROOT"
+        return 1
+    fi
+    # ----------------------------------------
+
+    log "Current working directory for stow: $(pwd)"
+    log "Stow package name: $package_name | Target directory: $target_dir"
+
+    # 2. Unstow any old symbolic links for this package
+    log "Unstowing potential old links for $package_name..."
+    stow -D -t "$target_dir" -v "$package_name" 2>/dev/null
+
+    # 3. Iterate over all files/folders the package intends to link and remove conflicts
+    find "$package_name" -maxdepth 1 -mindepth 1 -not -name '.' | while read -r item; do
+        local base_name=$(basename "$item")
+        local destination="$target_dir/$base_name"
+
+        # Check if the destination file exists AND IS NOT a symbolic link
+        if [ -e "$destination" ] && [ ! -L "$destination" ]; then
+            error "NON-LINK CONFLICT DETECTED: $destination. DELETING."
+            # Use 'rm -rf' without sudo unless strictly necessary
+            rm -rf "$destination" || { error "FAILED TO DELETE CONFLICT: $destination. Check permissions!"; return 1; }
+        fi
+    done
+    
+    # 4. Execute the final stow
+    local stow_command="stow -d . -t \"$target_dir\" -v -R \"$package_name\""
+    log "Executing stow command: $stow_command"
+    stow -d . -t "$target_dir" -v -R "$package_name"
+    local stow_status=$?
+
+    if [ $stow_status -ne 0 ]; then
+        error "STOW FAILED for $package_name. Exit code: $stow_status. Check verbose output above."
+        cd "$DOTFILES_ROOT"
+        return 1
+    else
+        log "Stow completed for $package_name."
+    fi
+
+    # Return to the script's root directory
+    cd "$DOTFILES_ROOT"
+}
+
+# --- 1. Package Installation (Arch/Pacman) ---
 
 install_packages() {
     log "Checking for GNU Stow..."
@@ -49,7 +115,7 @@ install_packages() {
     fi
     
     log "Updating package database..."
-    sudo pacman -Syu --noconfirm || error "Database update failed. Proceeding anyway."
+    sudo pacman -Syu --noconfirm || error "Database update failed. Proceeding with installation."
 
     PACKAGES_TO_INSTALL=""
     
@@ -62,10 +128,10 @@ install_packages() {
     # Collect Device-Specific Packages
     if [ "$DEVICE_TYPE" = "desktop" ] && [ -f "$DESKTOP_PACMAN" ]; then
         log "Adding DESKTOP packages from $DESKTOP_PACMAN..."
-        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$DESKTOP_PACMAN" | xargs)"
+        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$DESKTOP_PACMAN" | xargs) "
     elif [ "$DEVICE_TYPE" = "laptop" ] && [ -f "$LAPTOP_PACMAN" ]; then
         log "Adding LAPTOP packages from $LAPTOP_PACMAN..."
-        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$LAPTOP_PACMAN" | xargs)"
+        PACKAGES_TO_INSTALL+="$(grep -vE '^\s*#|^\s*$' "$LAPTOP_PACMAN" | xargs) "
     fi
     
     # Execute batch installation
@@ -82,16 +148,13 @@ install_packages() {
 setup_backgrounds() {
     log "Setting up system background directory..."
     
-    # Create the backgrounds directory if it doesn't exist
     if [ ! -d "$SYSTEM_BG_DIR" ]; then
         log "Creating $SYSTEM_BG_DIR (requires sudo)..."
         sudo mkdir -p "$SYSTEM_BG_DIR"
     fi
 
-    # Check if the background image exists in your repo
     if [ -f "$BG_IMAGE_SRC" ]; then
         log "Linking Grv_box.png to system backgrounds..."
-        # Create a symbolic link in the system folder pointing to your repo
         sudo ln -snf "$BG_IMAGE_SRC" "$SYSTEM_BG_DIR/Grv_box.png"
     else
         error "Background image not found at $BG_IMAGE_SRC. Skipping link."
@@ -104,75 +167,99 @@ setup_fish_shell() {
     log "Checking Fish shell configuration..."
     
     if ! command -v fish &> /dev/null; then
-        log "Fish not found. Installing..."
-        sudo pacman -S --noconfirm fish
+        log "Fish not found. Assuming it was or will be installed via pacman."
+        return
     fi
 
     FISH_PATH=$(which fish)
 
-    # Change default shell if it's not already Fish
     if [[ "$SHELL" != "$FISH_PATH" ]]; then
         log "Setting Fish as the default shell..."
         
-        # Ensure fish is in /etc/shells
         if ! grep -q "$FISH_PATH" /etc/shells; then
+            log "Adding Fish path to /etc/shells..."
             echo "$FISH_PATH" | sudo tee -a /etc/shells
         fi
         
         sudo chsh -s "$FISH_PATH" "$USER"
-        log "Shell updated to Fish. Changes apply after next login."
+        log "Shell updated to Fish. Changes apply after next login/reboot."
     else
         log "Fish is already your default shell."
     fi
 }
 
-# --- 4. Dotfiles Symlinking with Stow ---
+# --- 4. Neovim Plugin Manager Installation ---
+
+install_vim_plug_manager() {
+    log "Installing vim-plug manager..."
+    if ! command -v nvim &> /dev/null; then
+        log "Neovim not installed. Skipping vim-plug setup."
+        return
+    fi
+    
+    log "Installing vim-plug at $VIM_PLUG_DESTINATION"
+    mkdir -p "$(dirname "$VIM_PLUG_DESTINATION")"
+    if ! command -v curl &> /dev/null; then
+        error "Curl not found. Cannot download vim-plug."
+        return
+    fi
+    
+    if ! curl -fLo "$VIM_PLUG_DESTINATION" --create-dirs "$VIM_PLUG_URL"; then
+        error "Failed to install vim-plug manager."
+    fi
+}
+
+# --- 5. Dotfiles Symlinking with Stow (Main Logic) ---
 
 stow_dotfiles() {
-    log "Starting symlink creation with GNU Stow..."
+    log "Starting symlink creation with GNU Stow (OVERWRITE MODE)..."
     
-    # Navigate to the dotfiles directory relative to script location
-    cd "$DOTFILES_ROOT/dotfiles" || { error "Could not find 'dotfiles' subdirectory."; exit 1; }
-
     # Step 1: Stow root level directories (e.g., zsh, nvim, tmux)
-    log "Stowing root packages..."
-    ROOT_PACKAGES=$(find . -maxdepth 1 -mindepth 1 -type d \
+    log "Stowing root packages (targeting \$HOME)..."
+    # The package root for these is "dotfiles"
+    ROOT_PACKAGES=$(find "$DOTFILES_ROOT/dotfiles" -maxdepth 1 -mindepth 1 -type d \
         -not -name '.*' -not -name 'packages' -not -name 'config' -not -name 'images' \
         -exec basename {} \;)
     
     for package in $ROOT_PACKAGES; do
-        log "Stowing: $package"
-        # --adopt helps integrate existing files by moving them into the repo
-        stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
+        stow_force_overwrite "$package" "dotfiles" "$STOW_TARGET" || return 1
     done
 
-    # Step 2: Stow nested config packages (common, desktop, laptop)
-    if [ -d "config" ]; then
-        log "Stowing nested configurations..."
-        cd "config" || { error "Failed to enter config directory."; cd ..; exit 1; }
+    # Step 2: Stow nested config packages
+    if [ -d "$DOTFILES_ROOT/dotfiles/config" ]; then
+        log "Stowing nested configurations (targeting \$HOME/.config)"
         
-        declare -a CONDITIONAL_PACKAGES=("common")
-        [ "$DEVICE_TYPE" = "desktop" ] && CONDITIONAL_PACKAGES+=("desktop")
-        [ "$DEVICE_TYPE" = "laptop" ] && CONDITIONAL_PACKAGES+=("laptop")
+        # The package root for these is "dotfiles/config"
+        REPO_CONFIG_PATH="dotfiles/config"
+        CONFIG_TARGET_PATH="$STOW_TARGET/.config"
         
-        for package in "${CONDITIONAL_PACKAGES[@]}"; do
-            if [ -d "$package" ]; then
-                log "Stowing conditional package: $package"
-                stow -d . -t "$STOW_TARGET" -v -R --adopt "$package"
+        # Base configuration packages
+        declare -a CONFIG_PACKAGES=("common")
+        
+        # Add the device-specific configuration (which holds i3/i3blocks)
+        if [ "$DEVICE_TYPE" = "desktop" ] && [ -d "$DOTFILES_ROOT/$REPO_CONFIG_PATH/desktop" ]; then
+            CONFIG_PACKAGES+=("desktop")
+        elif [ "$DEVICE_TYPE" = "laptop" ] && [ -d "$DOTFILES_ROOT/$REPO_CONFIG_PATH/laptop" ]; then
+            CONFIG_PACKAGES+=("laptop")
+        fi
+        
+        for package in "${CONFIG_PACKAGES[@]}"; do
+            if [ -d "$DOTFILES_ROOT/$REPO_CONFIG_PATH/$package" ]; then
+                # Link packages (like 'laptop' or 'desktop') directly to $HOME/.config
+                stow_force_overwrite "$package" "$REPO_CONFIG_PATH" "$CONFIG_TARGET_PATH" || return 1
             fi
         done
-        cd ..
     fi
 
-    log "Finished stowing. Returning to root."
-    cd "$DOTFILES_ROOT"
+    log "Finished stowing."
 }
 
-# --- 5. Post-Stow Actions ---
+# --- 6. Neovim Plugin Installation ---
 
-nvim_plugin_install() {
+install_nvim_plugins() {
     if command -v nvim &> /dev/null; then
-        log "Running Neovim plugin installation..."
+        log "Running Neovim plugin installation (Requires stowed configuration)..."
+        # The Nvim configuration must be stowed by now for PlugInstall to work
         nvim --headless +PlugInstall +qall
     else
         log "Neovim not installed. Skipping plugins."
@@ -185,25 +272,33 @@ main() {
     # Greeting
     echo -e "\033[1;35m"
     echo "##########################"
-    echo "#      Hello, Waris!     #"
+    echo "#     Hello, Waris!      #"
     echo "##########################"
     echo -e "\033[0m"
 
+    log "!!! WARNING !!! This mode WILL OVERWRITE ALL existing system configurations that conflict with your dotfiles."
+
     prompt_device_type
     
-    install_packages
+    # Handle the previous failed stow path if it exists
+    if [ -d "$HOME/.config/.config" ]; then
+        error "Previous failed stow path detected. Removing $HOME/.config/.config."
+        rm -rf "$HOME/.config/.config"
+    fi
+
+    install_packages || return 1
+    
+    install_vim_plug_manager
     
     setup_fish_shell
-    
     setup_backgrounds
     
-    stow_dotfiles
+    stow_dotfiles || { error "Stow failed. Check your repository structure."; return 1; }
     
-    nvim_plugin_install
+    install_nvim_plugins
     
     log "\n✅ Installation complete!"
-    log "Note: Your background is linked at: $SYSTEM_BG_DIR/Grv_box.png"
-    log "Please reboot your system. This action is necessary to complete the installation and fully integrate essential components."
+    log "To finalize the installation and integrate essential components (like the i3 window manager), a **system reboot is required**."
 }
 
 main

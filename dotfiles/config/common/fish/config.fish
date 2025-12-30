@@ -2,6 +2,9 @@ if status is-interactive
     # Commands to run in interactive sessions can go here
 end
 
+# Disable the default fish greeting message
+set -g fish_greeting ""
+
 set -gx PATH /usr/bin /bin $PATH
 set -gx EDITOR nvim
 set -gx VISUAL nvim

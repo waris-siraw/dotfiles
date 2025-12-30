@@ -1,0 +1,32 @@
+# =================================================
+# i3blocks — Gruvbox Dark 
+# =================================================
+
+separator=false
+markup=pango
+
+# --- WiFi ---
+[wifi]
+command=if [ "$BLOCK_BUTTON" = "1" ]; then nm-connection-editor >/dev/null 2>&1 & fi; SSID=$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | grep '^yes' | cut -d: -f2); [ -z "$SSID" ] && SSID="Down"; echo "   <span foreground=\"#689d6a\">    </span><span foreground=\"#8ec07c\">$SSID</span> <span foreground='#928374'>│ </span>"
+interval=10
+
+# --- Bluetooth ---
+[bluetooth]
+command=if [ "$BLOCK_BUTTON" = "1" ]; then blueman-manager >/dev/null 2>&1 & fi; rfkill list bluetooth 2>/dev/null | grep -q "blocked: yes" && STATUS="Off" || STATUS="On"; echo "<span foreground=\"#076678\">  </span><span foreground=\"#458588\">$STATUS</span> <span foreground='#928374'>│ </span>"
+interval=10
+
+# --- Battery ---
+[battery]
+command=INFO=$(acpi -b 2>/dev/null | head -n1); [ -z "$INFO" ] && exit 0; NUM=$(echo "$INFO" | sed -n 's/.* \([0-9]\+\)%.*/\1/p'); [ -z "$NUM" ] && exit 0; STATE=$(echo "$INFO" | grep -o 'Charging\|Discharging\|Full'); ICON="  "; [ "$NUM" -le 80 ] && ICON="  "; [ "$NUM" -le 60 ] && ICON="  "; [ "$NUM" -le 40 ] && ICON="  "; [ "$NUM" -le 20 ] && ICON="  "; [ "$STATE" = "Charging" ] && ICON=" "; echo "<span foreground=\"#b16286\">$ICON</span><span foreground=\"#d3869b\"> ${NUM}%</span> <span foreground=\"#928374\">│ </span>"
+interval=30
+
+# --- Date ---
+[date]
+command=echo "<span foreground=\"#98971a\">   $(date '+%a %d %b')</span> <span foreground='#928374'>│ </span>"
+interval=60
+
+# --- Time ---
+[time]
+command=echo "<span foreground=\"#d79921\">   $(date '+%H:%M:%S   ')</span>"
+interval=1
+
