@@ -5,7 +5,7 @@ show_hidden = false
 [theme]
 use = "custom"
 [manager]
-editor = "/usr/bin/nvim"
+editor = { command = "nvim" }
 [preview]
 image = true
 
