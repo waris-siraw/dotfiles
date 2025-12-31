@@ -17,7 +17,8 @@ alacritty
 fish
 tmux
 zoxide          
-fzf             
+fzf 
+atuin
 neovim     
 code
 yazi
