@@ -1,7 +1,7 @@
+# Fish-config
 if status is-interactive
-    # Commands to run in interactive sessions can go here
+    atuin init fish | source
 end
-
 # Disable the default fish greeting message
 set -g fish_greeting ""
 
@@ -27,4 +27,6 @@ set -g fish_color_operator      98971a
 set -g fish_color_escape        689d6a
 set -g fish_color_autosuggestion 504945
 set -g fish_color_cwd           98971a
+
+
 

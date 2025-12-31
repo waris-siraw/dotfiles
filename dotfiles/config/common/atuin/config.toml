@@ -1,0 +1,10 @@
+style = "compact"
+inline_height = 15
+show_help = false
+
+search_mode = "fuzzy"
+filter_mode = "global"
+keymap_mode = "vim-insert"
+
+sync_frequency = "5m"
+
