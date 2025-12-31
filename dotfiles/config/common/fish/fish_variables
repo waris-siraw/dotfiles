@@ -1,4 +1,5 @@
 # This file contains fish universal variable definitions.
 # VERSION: 3.0
 SETUVAR --export FZF_DEFAULT_OPTS:\x2d\x2dheight\x2040\x25\x20\x2d\x2dreverse\x20\x2d\x2dborder
+SETUVAR __fish_initialized:4300
 SETUVAR fish_key_bindings:fish_default_key_bindings
