@@ -44,4 +44,8 @@ pulseaudio
 pulseaudio-alsa
 pavucontrol
 alsa-utils
-
+nodejs
+npm
+python
+python-pip
+rust
