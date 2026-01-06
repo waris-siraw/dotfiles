@@ -29,6 +29,7 @@ libnotify
 feh
 zathura       
 zathura-pdf-mupdf 
+poppler
 btop
 xdg-utils
 xdg-user-dirs
