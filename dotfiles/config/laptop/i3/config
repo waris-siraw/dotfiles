@@ -1,4 +1,3 @@
-
 #######################################################################
 #i3 config by Waris
 #######################################################################
@@ -32,7 +31,6 @@ exec --no-startup-id dex --autostart --environment i3
 exec --no-startup-id ~/.config/xrandr/set-rate.sh
 exec --no-startup-id dunst
 
-
 # lock on suspend
 exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 exec --no-startup-id picom
@@ -51,7 +49,6 @@ bindsym XF86AudioLowerVolume exec --no-startup-id amixer -q set Master 5%-
 # Mute toggle
 bindsym XF86AudioMute exec --no-startup-id amixer -q set Master toggle
 
-
 # --- Media playback control ---
 # Play / Pause
 bindsym XF86AudioPlay exec --no-startup-id playerctl play-pause
@@ -62,14 +59,12 @@ bindsym XF86AudioNext exec --no-startup-id playerctl next
 # Previous track
 bindsym XF86AudioPrev exec --no-startup-id playerctl previous
 
-
 # --- Brightness control ---
 # Increase brightness
 bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set +10%
 
 # Decrease brightness
 bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
-
 
 # --- Lock screen + suspend ---
 # Mod+o locks the screen and suspends the system
@@ -81,8 +76,8 @@ bindsym $mod+o exec --no-startup-id i3lock -c 000000 && systemctl suspend
 floating_modifier $mod
 tiling_drag modifier titlebar
 
-# remove titlebar (kept)
-for_window [class=".*"] border pixel 0
+# Sottile bordo abilitato (2 pixel)
+for_window [class=".*"] border pixel 2
 
 #######################################################################
 # 05) APP LAUNCH / BASIC BINDS 
@@ -92,7 +87,6 @@ bindsym $mod+q kill
 bindsym $mod+d exec --no-startup-id rofi -show drun
 bindsym $mod+Shift+w exec firefox
 bindsym Print exec --no-startup-id flameshot gui
-
 
 #######################################################################
 # 06) FOCUS MOVEMENT 
@@ -236,3 +230,14 @@ bar {
        urgent_workspace   $red    $bg0  $fg0
     }
 }
+
+#######################################################################
+# 15) WINDOW COLORS (GRUVBOX FOCUS/UNFOCUS)
+#######################################################################
+# class                 border  backgr. text    indicator child_border
+client.focused          $yellow $yellow $bg0    $yellow   $yellow
+client.focused_inactive $bg1    $bg1    $fg1    $bg1      $bg1
+client.unfocused        $green  $bg0    $gray   $bg0      $green
+client.urgent           $red    $red    $fg0    $red      $red
+client.placeholder      $bg0    $bg0    $fg0    $bg0      $bg0
+client.background       $bg0

@@ -53,8 +53,8 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 floating_modifier $mod
 tiling_drag modifier titlebar
 
-# remove titlebar (kept)
-for_window [class=".*"] border pixel 0
+# Sottile bordo abilitato (2 pixel)
+for_window [class=".*"] border pixel 2
 
 #######################################################################
 # 05) APP LAUNCH 
@@ -211,3 +211,13 @@ bar {
     }
 }
 
+#######################################################################
+# 15) WINDOW COLORS (GRUVBOX FOCUS/UNFOCUS)
+#######################################################################
+# class                 border  backgr. text    indicator child_border
+client.focused          $yellow $yellow $bg0    $yellow   $yellow
+client.focused_inactive $bg1    $bg1    $fg1    $bg1      $bg1
+client.unfocused        $green  $bg0    $gray   $bg0      $green
+client.urgent           $red    $red    $fg0    $red      $red
+client.placeholder      $bg0    $bg0    $fg0    $bg0      $bg0
+client.background       $bg0
