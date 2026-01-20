@@ -76,8 +76,11 @@ bindsym $mod+o exec --no-startup-id i3lock -c 000000 && systemctl suspend
 floating_modifier $mod
 tiling_drag modifier titlebar
 
-# Sottile bordo abilitato (2 pixel)
-for_window [class=".*"] border pixel 2
+# Windows border settings
+default_border pixel 2 
+default_floating_border pixel 
+smart_borders on 
+hide_edge_borders smart_no_gaps 
 
 #######################################################################
 # 05) APP LAUNCH / BASIC BINDS 
@@ -93,7 +96,7 @@ bindsym Print exec --no-startup-id flameshot gui
 #######################################################################
 bindsym $mod+j focus left
 bindsym $mod+k focus down
-#bindsym $mod+l focus up
+bindsym $mod+l focus up
 bindsym $mod+semicolon focus right
 
 bindsym $mod+Left focus left
